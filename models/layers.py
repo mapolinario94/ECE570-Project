@@ -152,9 +152,9 @@ class Conv2dLIF(nn.Conv2d):
             self.activation = activation.apply
 
     def _neuron_init(self, input: torch.Tensor, mem):
-        self.batch_size = input.size(0)
-        self.width = input.size(2)
-        self.height = input.size(3)
+        self.batch_size = input.shape[0]
+        self.width = input.shape[2]
+        self.height = input.shape[3]
         if mem is None:
             self.mem = torch.zeros(self.batch_size, self.out_channels, self.width, self.height, device=self.device)
         else:
