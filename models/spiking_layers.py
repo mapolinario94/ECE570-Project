@@ -70,15 +70,17 @@ class LinearLIF(nn.Linear):
         else:
             self.activation = activation.apply
 
-    def _init_neuron(self, batch_size):
-        self.mem = torch.zeros(batch_size, self.out_features).to(self.device)
+    def _init_neuron(self, input, mem):
+        batch_size = input.shape[0]
+        if mem is None:
+            self.mem = torch.zeros(batch_size, self.out_features).to(self.device)
+        else:
+            self.mem = mem
         self.spikes = torch.zeros(batch_size, self.out_features).to(self.device)
         # self.mem_hist = torch.zeros(time_steps, batch_size, self.out_features).to(self.device)
 
-    def forward(self, input: torch.Tensor):
-
-        batch_size = input.shape[0]
-        self._init_neuron(batch_size)
+    def forward(self, input: torch.Tensor, mem=None):
+        self._init_neuron(input, mem)
         input_activation = F.linear(input, self.weight, self.bias)
         if not self.cumulative:
             mem_thr = self.mem/self.threshold - 1.0
