@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 import math
-from spiking_layers import LinearLIF, Conv2dLIF
+from models.spiking_layers import LinearLIF, Conv2dLIF
 
 
 class SpikingModel(nn.Module):
