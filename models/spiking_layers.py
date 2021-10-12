@@ -144,10 +144,10 @@ class Conv2dLIF(nn.Conv2d):
         self.width = input.shape[2]
         self.height = input.shape[3]
         if mem is None:
-            self.mem = torch.zeros(self.batch_size, self.out_channels, self.width, self.height, device=self.device)
+            self.mem = torch.zeros(self.batch_size, self.out_channels, self.width, self.height).to(self.device)
         else:
             self.mem = mem
-        self.spikes = torch.zeros(self.batch_size, self.out_channels, self.width, self.height, device=self.device)
+        self.spikes = torch.zeros(self.batch_size, self.out_channels, self.width, self.height).to(self.device)
 
     def forward(self, input: torch.Tensor,  mem=None) -> tuple:
         features_input = self._conv_forward(input, self.weight, self.bias)
