@@ -3,9 +3,9 @@ from torch import nn
 from torch.nn import functional as F
 
 
-def SpikeNorm(ann_model: nn.Module, snn_model: nn.Module, data_loader, device=None, timesteps=100):
+def spike_norm(ann_model: nn.Module, snn_model: nn.Module, data_loader, device=None, timesteps=100):
     missing_keys, unexpected_keys = snn_model.load_state_dict(ann_model.state_dict(), strict=False)
-    print('\n Missing keys : {}, Unexpected Keys: {}'.format(missing_keys, unexpected_keys))
+    print('\n Missing keys : {}\n Unexpected Keys: {}'.format(missing_keys, unexpected_keys))
 
     updating_layer = 0
 
@@ -70,3 +70,4 @@ def SpikeNorm(ann_model: nn.Module, snn_model: nn.Module, data_loader, device=No
                 print(f"Threshold: {layer.threshold}")
 
     return snn_model
+
