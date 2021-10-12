@@ -34,7 +34,7 @@ def SpikeNorm(ann_model: nn.Module, snn_model: nn.Module, data_loader, device=No
                                 break
                             spk = layer_conv(spk)
             if isinstance(layer, nn.Conv2d):
-                layer.threshold.data = torch.tensor(max_threshold, device=device)
+                layer.threshold.data = max_threshold
                 print(layer)
                 print(f"Threshold: {layer.threshold}")
 
@@ -57,7 +57,7 @@ def SpikeNorm(ann_model: nn.Module, snn_model: nn.Module, data_loader, device=No
                     spk = spk.view(batch_size, -1)
 
                     for idx_linear, layer_linear in enumerate(snn_model.classifier):
-                        if isinstance(layer_linear, nn.Conv2d):
+                        if isinstance(layer_linear, nn.Linear):
                             if idx_linear == idx:
                                 cur_threshold = torch.max(F.linear(spk, layer_linear.weight, layer_linear.bias))
                                 if cur_threshold > max_threshold:
@@ -65,7 +65,7 @@ def SpikeNorm(ann_model: nn.Module, snn_model: nn.Module, data_loader, device=No
                                 break
                             spk, mem_classifier[idx_linear] = layer_linear(spk, mem_classifier[idx_linear])
             if isinstance(layer, nn.Linear):
-                layer.threshold.data = torch.tensor(max_threshold, device=device)
+                layer.threshold.data = max_threshold
                 print(layer)
                 print(f"Threshold: {layer.threshold}")
 
