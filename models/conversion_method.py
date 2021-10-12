@@ -13,7 +13,7 @@ def spike_norm(ann_model: nn.Module, snn_model: nn.Module, data_loader, device=N
 
     with torch.no_grad():
         for idx, layer in enumerate(snn_model.features):
-            max_threshold = 0
+            max_threshold = torch.tensor(0)
             for images, targets in data_loader:
 
                 snn_model._init_internal_states()
@@ -39,7 +39,7 @@ def spike_norm(ann_model: nn.Module, snn_model: nn.Module, data_loader, device=N
                 print(f"Threshold: {layer.threshold}")
 
         for idx, layer in enumerate(snn_model.classifier):
-            max_threshold = 0
+            max_threshold = torch.tensor(0)
             for images, targets in data_loader:
                 batch_size = images.shape[0]
 
