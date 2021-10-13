@@ -39,10 +39,10 @@ def test(model: nn.Module, description: str):
 def timesteps_performance(model: nn.Module, timesteps_list: list, threshold_scaling: float = 1):
     for layer in model.features:
         if isinstance(layer, nn.Conv2d):
-            layer.leak.data *= threshold_scaling
+            layer.threshold.data *= threshold_scaling
     for layer in model.classifier:
         if isinstance(layer, nn.Linear):
-            layer.leak.data *= threshold_scaling
+            layer.threshold.data *= threshold_scaling
 
     acc_list = []
     loss_list = []
@@ -54,10 +54,10 @@ def timesteps_performance(model: nn.Module, timesteps_list: list, threshold_scal
 
     for layer in model.features:
         if isinstance(layer, nn.Conv2d):
-            layer.leak.data /= threshold_scaling
+            layer.threshold.data /= threshold_scaling
     for layer in model.classifier:
         if isinstance(layer, nn.Linear):
-            layer.leak.data /= threshold_scaling
+            layer.threshold.data /= threshold_scaling
 
     return loss_list, acc_list
 
@@ -121,8 +121,9 @@ if __name__ == "__main__":
     plt.legend(["ANN", "SNN Vth", "SNN Vth*0.8", "SNN Vth*0.6", "SNN Vth*0.4", "SNN Vth*0.2"])
     plt.xlabel("No. Timesteps")
     plt.ylabel("Accuracy")
+    plt.grid(True)
     plt.show()
 
     image_format = 'svg'  # e.g .png, .svg, etc.
-    image_name = 'acc_timesteps.svg'
+    image_name = 'acc_timesteps2.svg'
     fig.savefig(image_name, format=image_format, dpi=1200)
