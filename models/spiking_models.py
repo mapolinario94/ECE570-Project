@@ -21,15 +21,39 @@ class SpikingModel(nn.Module):
         self.timesteps = timesteps
         self.features = features
         self.classifier = classifier
+        self.device = device
         self._init_weights()
 
-    def _init_internal_states(self):
-        self.mem_classifier = []
-        self.mem_features = []
-        for layer_idx in range(len(self.classifier)):
-            self.mem_classifier += [None]
+    def _init_internal_states(self, X):
+        batch_size = X.shape[0]
+        width = X.shape[2]
+        height = X.shape[3]
+        self.mem_classifier = {}
+        self.mem_features = {}
+        self.mask_features = {}
+        self.mask_classifier = {}
+        last_idx_layer = 0
         for layer_idx in range(len(self.features)):
-            self.mem_features += [None]
+            if isinstance(self.features[layer_idx], nn.Conv2d):
+                self.mem_features[layer_idx] = torch.zeros(batch_size, self.features[layer_idx].out_channels, width,
+                                                           height).to(self.device)
+                last_idx_layer = layer_idx
+            elif isinstance(self.features[layer_idx], nn.AvgPool2d):
+                width = width // self.features[layer_idx].kernel_size
+                height = height // self.features[layer_idx].kernel_size
+            elif isinstance(self.features[layer_idx], nn.Dropout):
+                self.mask_features[layer_idx] = self.features[layer_idx](
+                    torch.ones(self.mem_features[last_idx_layer].shape).cuda())
+
+        last_idx_layer = 0
+        for layer_idx in range(len(self.classifier)):
+            if isinstance(self.classifier[layer_idx], nn.Linear):
+                self.mem_classifier[layer_idx] = torch.zeros(batch_size, self.classifier[layer_idx].out_features).to(
+                    self.device)
+                last_idx_layer = layer_idx
+            elif isinstance(self.classifier[layer_idx], nn.Dropout):
+                self.mask_classifier[layer_idx] = self.classifier[layer_idx](
+                    torch.ones(self.mem_classifier[last_idx_layer].shape).cuda())
 
     def _init_weights(self):
         for m in self.modules():
@@ -49,19 +73,27 @@ class SpikingModel(nn.Module):
 
     def forward(self, X):
         batch_size = X.shape[0]
-        self._init_internal_states()
+        self._init_internal_states(X)
+        final_idx = 0
         for t in range(self.timesteps):
             spk = X
             for layer_idx in range(len(self.features)):
                 if isinstance(self.features[layer_idx], nn.Conv2d):
                     spk, self.mem_features[layer_idx] = self.features[layer_idx](spk, self.mem_features[layer_idx])
-                if isinstance(self.features[layer_idx], nn.MaxPool2d):
+                if isinstance(self.features[layer_idx], nn.AvgPool2d):
                     spk = self.features[layer_idx](spk)
-            spk = spk.view(batch_size, -1)
+                if isinstance(self.features[layer_idx], nn.Dropout):
+                    spk = spk * self.mask_features[layer_idx]
+            # print(spk.shape)
+            spk = spk.reshape(batch_size, -1)
             for layer_idx in range(len(self.classifier)):
                 if isinstance(self.classifier[layer_idx], nn.Linear):
-                    spk, self.mem_classifier[layer_idx] = self.classifier[layer_idx](spk, self.mem_classifier[layer_idx])
-        return self.mem_classifier[-1]
+                    spk, self.mem_classifier[layer_idx] = self.classifier[layer_idx](spk,
+                                                                                     self.mem_classifier[layer_idx])
+                if isinstance(self.classifier[layer_idx], nn.Dropout):
+                    spk = spk * self.mask_classifier[layer_idx]
+                final_idx = layer_idx
+        return self.mem_classifier[final_idx]
 
 
 if __name__ == "__main__":
@@ -69,10 +101,10 @@ if __name__ == "__main__":
     features = nn.Sequential(
         Conv2dLIF(3, 32, kernel_size=5, padding='same', device=device, leak=1.0),
         nn.ReLU(inplace=True),
-        nn.MaxPool2d(kernel_size=2, stride=2),
+        nn.AvgPool2d(kernel_size=2, stride=2),
         Conv2dLIF(32, 64, kernel_size=5, padding='same', device=device, leak=1.0),
         nn.ReLU(inplace=True),
-        nn.MaxPool2d(kernel_size=2, stride=2),
+        nn.AvgPool2d(kernel_size=2, stride=2),
         Conv2dLIF(64, 64, kernel_size=3, padding='same', device=device, leak=1.0),
         nn.ReLU(inplace=True),
     )

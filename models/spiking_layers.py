@@ -31,9 +31,10 @@ class LinearLIF(nn.Linear):
                  in_features,
                  out_features,
                  bias=False,
-                 leak=0.9,
+                 leak=1.0,
                  threshold=1.0,
                  learnable_tl=False,
+                 individual_tl=False,
                  cumulative: bool = False,
                  activation=None,
                  device=None,
@@ -43,7 +44,7 @@ class LinearLIF(nn.Linear):
         :param in_features: number of input features
         :param out_features: number of ouput features
         :param bias: bias parameter. Default bias=False
-        :param leak: leak parameter. Default leak=0.9
+        :param leak: leak parameter. Default leak=1.0
         :param threshold: threshold parameter. Default threshold=1.0
         :param cumulative: bool. if true, the layer just accumulate all the inputs received and return the membrane
         potential value. It should be true for last layer only. Default cumulative=False
@@ -58,8 +59,12 @@ class LinearLIF(nn.Linear):
                                         device=device,
                                         dtype=dtype)
         self.out_features = out_features
-        self.leak = nn.Parameter(torch.tensor(leak), requires_grad=learnable_tl)
-        self.threshold = nn.Parameter(torch.tensor(threshold), requires_grad=learnable_tl)
+        if individual_tl:
+            self.leak = nn.Parameter(torch.ones(out_features)*leak, requires_grad=learnable_tl)
+            self.threshold = nn.Parameter(torch.ones(out_features)*threshold, requires_grad=learnable_tl)
+        else:
+            self.leak = nn.Parameter(torch.tensor(leak), requires_grad=learnable_tl)
+            self.threshold = nn.Parameter(torch.tensor(threshold), requires_grad=learnable_tl)
         self.mem = None
         self.spikes = None
         self.cumulative = cumulative
@@ -83,19 +88,19 @@ class LinearLIF(nn.Linear):
         self._init_neuron(input, mem)
         input_activation = F.linear(input, self.weight, self.bias)
         if not self.cumulative:
+            self.mem = self.leak * self.mem + input_activation
             mem_thr = self.mem/self.threshold - 1.0
-            output = self.activation(mem_thr)
+            self.spikes = self.activation(mem_thr)
             rst = self.threshold * (mem_thr > 0).float()
 
-            self.mem = self.leak * self.mem + input_activation - rst
-            self.spikes = output.clone()
+            self.mem = self.mem - rst #self.spikes*self.threshold
 
         else:
             self.mem = self.mem + input_activation
         return self.spikes, self.mem
 
     def extra_repr(self) -> str:
-        return 'in_features={}, out_features={}, bias={}, leak={}, threshold={}'.format(
+        return 'in_features={}, \nout_features={}, \nbias={}, \nleak={}, \nthreshold={}'.format(
             self.in_features, self.out_features, self.bias is not None, self.leak, self.threshold
         )
 
@@ -105,9 +110,12 @@ class Conv2dLIF(nn.Conv2d):
                  in_channels: int,
                  out_channels: int,
                  kernel_size,
-                 leak=0.9,
+                 leak=1.0,
                  threshold=1.0,
                  learnable_tl=False,
+                 individual_tl=False,
+                 width=None,
+                 height=None,
                  activation=None,
                  stride=1,
                  padding=0,
@@ -129,8 +137,12 @@ class Conv2dLIF(nn.Conv2d):
                                         padding_mode=padding_mode,
                                         device=device,
                                         dtype=dtype)
-        self.leak = nn.Parameter(torch.tensor(leak), requires_grad=learnable_tl)
-        self.threshold = nn.Parameter(torch.tensor(threshold), requires_grad=learnable_tl)
+        if individual_tl and width and height:
+            self.leak = nn.Parameter(torch.ones(width, height)*leak, requires_grad=learnable_tl)
+            self.threshold = nn.Parameter(torch.ones(width, height)*threshold, requires_grad=learnable_tl)
+        else:
+            self.leak = nn.Parameter(torch.tensor(leak), requires_grad=learnable_tl)
+            self.threshold = nn.Parameter(torch.tensor(threshold), requires_grad=learnable_tl)
         self.mem = None
         self.spikes = None
         self.device = device
@@ -152,11 +164,11 @@ class Conv2dLIF(nn.Conv2d):
     def forward(self, input: torch.Tensor,  mem=None) -> tuple:
         features_input = self._conv_forward(input, self.weight, self.bias)
         self._neuron_init(features_input, mem)
-
+        self.mem = self.leak * self.mem + features_input
         mem_thr = (self.mem / self.threshold) - 1.0
         self.spikes = self.activation(mem_thr)
         rst = self.threshold * (mem_thr > 0).float()
-        self.mem = self.leak * self.mem + features_input - rst
+        self.mem = self.mem - rst  # self.spikes*self.threshold
 
         return self.spikes, self.mem
 

@@ -115,15 +115,16 @@ if __name__ == "__main__":
 
     scales = [1, 0.8, 0.6, 0.4, 0.2]
     fig = plt.figure("Acc vs Timesteps")
-    plt.plot(num_timesteps, [71.75]*8, "-o")
+    plt.plot([71.75]*8, "-o")
     for k in range(5):
-        plt.plot(num_timesteps, acc_list[k], "-o")
+        plt.plot(acc_list[k], "-o")
     plt.legend(["ANN", "SNN Vth", "SNN Vth*0.8", "SNN Vth*0.6", "SNN Vth*0.4", "SNN Vth*0.2"])
     plt.xlabel("No. Timesteps")
     plt.ylabel("Accuracy")
+    plt.xticks(range(8), [str(k) for k in num_timesteps])
     plt.grid(True)
     plt.show()
 
     image_format = 'svg'  # e.g .png, .svg, etc.
-    image_name = 'acc_timesteps2.svg'
+    image_name = 'acc_timesteps3.svg'
     fig.savefig(image_name, format=image_format, dpi=1200)
