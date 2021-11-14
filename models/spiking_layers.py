@@ -37,6 +37,7 @@ class LinearLIF(nn.Linear):
                  individual_tl=False,
                  cumulative: bool = False,
                  activation=None,
+                 reset: str = "soft",
                  device=None,
                  dtype=None) -> None:
         """
@@ -50,6 +51,7 @@ class LinearLIF(nn.Linear):
         potential value. It should be true for last layer only. Default cumulative=False
         :param activation: activation function. if None, the layers use the LinearSpike class as an activation.
         Default activation=None
+        :param reset: reset mechanism of the membrane potential. It could be "soft" or "hard". Default reset="soft"
         :param device: device to operate the layer. Default device=None
         :param dtype: data type. Default dtype=None
         """
@@ -65,6 +67,7 @@ class LinearLIF(nn.Linear):
         else:
             self.leak = nn.Parameter(torch.tensor(leak), requires_grad=learnable_tl)
             self.threshold = nn.Parameter(torch.tensor(threshold), requires_grad=learnable_tl)
+        self.reset = reset
         self.mem = None
         self.spikes = None
         self.cumulative = cumulative
@@ -92,8 +95,10 @@ class LinearLIF(nn.Linear):
             mem_thr = self.mem/self.threshold - 1.0
             self.spikes = self.activation(mem_thr)
             rst = self.threshold * (mem_thr > 0).float()
-
-            self.mem = self.mem - rst #self.spikes*self.threshold
+            if self.reset == "hard":
+                self.mem = self.mem * (1 - rst / self.threshold)
+            else:
+                self.mem = self.mem - rst  # self.spikes*self.threshold
 
         else:
             self.mem = self.mem + input_activation
@@ -117,6 +122,7 @@ class Conv2dLIF(nn.Conv2d):
                  width=None,
                  height=None,
                  activation=None,
+                 reset: str = "soft",
                  stride=1,
                  padding=0,
                  dilation=1,
@@ -143,6 +149,7 @@ class Conv2dLIF(nn.Conv2d):
         else:
             self.leak = nn.Parameter(torch.tensor(leak), requires_grad=learnable_tl)
             self.threshold = nn.Parameter(torch.tensor(threshold), requires_grad=learnable_tl)
+        self.reset = reset
         self.mem = None
         self.spikes = None
         self.device = device
@@ -168,7 +175,10 @@ class Conv2dLIF(nn.Conv2d):
         mem_thr = (self.mem / self.threshold) - 1.0
         self.spikes = self.activation(mem_thr)
         rst = self.threshold * (mem_thr > 0).float()
-        self.mem = self.mem - rst  # self.spikes*self.threshold
+        if self.reset == "hard":
+            self.mem = self.mem*(1-rst/self.threshold)
+        else:
+            self.mem = self.mem - rst  # self.spikes*self.threshold
 
         return self.spikes, self.mem
 
