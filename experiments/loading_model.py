@@ -81,22 +81,22 @@ classifier = nn.Sequential(
 
 snn_model = SpikingModel(features, classifier, timesteps=20, device=DEVICE)
 
-#
-# pretrained_ann = "../data/pre_trained_models/ann_vgg5_cifar10.pth"
-# state = torch.load(pretrained_ann, map_location="cpu")
-# ann_model = ANNModel()
-# # print(ann_model.features[0].weight)
-# cur_dict = ann_model.state_dict()
-# for key in state['state_dict'].keys():
-#     if key[7:] in cur_dict:
-#         print(key[7:])
-#         cur_dict[key[7:]] = nn.Parameter(state['state_dict'][key].data)
-#
-# ann_model.load_state_dict(cur_dict)
-# # print(ann_model.features[0].weight)
-# ann_model.to(DEVICE)
-# # ann_model.load_state_dict(pretrained_ann['state_dict'])
-#
+
+pretrained_ann = "../data/pre_trained_models/ann_vgg5_cifar10.pth"
+state = torch.load(pretrained_ann, map_location="cpu")
+ann_model = ANNModel()
+# print(ann_model.features[0].weight)
+cur_dict = ann_model.state_dict()
+for key in state['state_dict'].keys():
+    if key[7:] in cur_dict:
+        print(key[7:])
+        cur_dict[key[7:]] = nn.Parameter(state['state_dict'][key].data)
+
+ann_model.load_state_dict(cur_dict)
+# print(ann_model.features[0].weight)
+ann_model.to(DEVICE)
+# ann_model.load_state_dict(pretrained_ann['state_dict'])
+
 def test(classifier, epoch):
 
     classifier.eval() # we need to set the mode for our model
@@ -125,7 +125,8 @@ test_losses = []
 test_counter = []
 max_epoch = 20
 #
-# test(ann_model, 1)
+print("ANN model performance:")
+test(ann_model, 1)
 #
 # snn_model = spike_norm(ann_model, snn_model, train_loader, DEVICE, 20)
 snn_model.load_state_dict(torch.load("../data/snn_model_vgg5_20ts.pth"))
@@ -133,11 +134,12 @@ snn_model.to(DEVICE)
 
 
 threshold_scaling = 0.6
-snn_model.timesteps = 250
+snn_model.timesteps = 500
 for layer in snn_model.features:
     if isinstance(layer, nn.Conv2d):
         layer.threshold.data *= threshold_scaling
 for layer in snn_model.classifier:
     if isinstance(layer, nn.Linear):
         layer.threshold.data *= threshold_scaling
+print(f"SNN model performance - Vth scaling={threshold_scaling} - Timesteps={snn_model.timesteps}")
 test(snn_model, 1)
