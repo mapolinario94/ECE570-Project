@@ -3,7 +3,7 @@ from torch import nn
 from torch.nn import functional as F
 
 
-def spike_norm(ann_model: nn.Module, snn_model: nn.Module, data_loader, device=None, timesteps=100):
+def spike_norm(ann_model: nn.Module, snn_model: nn.Module, data_loader, device=None, timesteps=100, scale=0.7):
     missing_keys, unexpected_keys = snn_model.load_state_dict(ann_model.state_dict(), strict=False)
     print('\n Missing keys : {}\n Unexpected Keys: {}'.format(missing_keys, unexpected_keys))
 
@@ -35,7 +35,7 @@ def spike_norm(ann_model: nn.Module, snn_model: nn.Module, data_loader, device=N
                                 spk = layer_conv(spk)
                             elif isinstance(layer_conv, nn.Dropout):
                                 spk = spk * mask_features[idx_conv]
-                layer.threshold.data = max_threshold
+                layer.threshold.data = max_threshold*scale
                 print(layer)
                 print(f"Threshold: {layer.threshold}")
 
@@ -72,7 +72,7 @@ def spike_norm(ann_model: nn.Module, snn_model: nn.Module, data_loader, device=N
                                 spk, mem_classifier[idx_linear] = layer_linear(spk, mem_classifier[idx_linear])
                             elif isinstance(layer_linear, nn.Dropout):
                                 spk = spk * mask_classifier[idx_linear]
-                layer.threshold.data = max_threshold
+                layer.threshold.data = max_threshold*scale
                 print(layer)
                 print(f"Threshold: {layer.threshold}")
 
