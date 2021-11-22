@@ -22,7 +22,6 @@ class SpikingModel(nn.Module):
         self.features = features
         self.classifier = classifier
         self.device = device
-        self._init_weights()
 
     def _init_internal_states(self, X):
         batch_size = X.shape[0]
@@ -38,7 +37,7 @@ class SpikingModel(nn.Module):
                 self.mem_features[layer_idx] = torch.zeros(batch_size, self.features[layer_idx].out_channels, width,
                                                            height).to(self.device)
                 last_idx_layer = layer_idx
-            elif isinstance(self.features[layer_idx], nn.AvgPool2d):
+            elif isinstance(self.features[layer_idx], nn.AvgPool2d) or isinstance(self.features[layer_idx], nn.MaxPool2d):
                 width = width // self.features[layer_idx].kernel_size
                 height = height // self.features[layer_idx].kernel_size
             elif isinstance(self.features[layer_idx], nn.Dropout):
@@ -55,22 +54,6 @@ class SpikingModel(nn.Module):
                 self.mask_classifier[layer_idx] = self.classifier[layer_idx](
                     torch.ones(self.mem_classifier[last_idx_layer].shape).cuda())
 
-    def _init_weights(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-                m.weight.data.normal_(0,  math.sqrt(2. / n))
-                if m.bias is not None:
-                    m.bias.data.zero_()
-            elif isinstance(m, nn.BatchNorm2d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
-            elif isinstance(m, nn.Linear):
-                n = m.weight.size(1)
-                m.weight.data.normal_(0, 0.01)
-                if m.bias is not None:
-                    m.bias.data.zero_()
-
     def forward(self, X):
         batch_size = X.shape[0]
         self._init_internal_states(X)
@@ -80,7 +63,7 @@ class SpikingModel(nn.Module):
             for layer_idx in range(len(self.features)):
                 if isinstance(self.features[layer_idx], nn.Conv2d):
                     spk, self.mem_features[layer_idx] = self.features[layer_idx](spk, self.mem_features[layer_idx])
-                if isinstance(self.features[layer_idx], nn.AvgPool2d):
+                if isinstance(self.features[layer_idx], nn.AvgPool2d) or isinstance(self.features[layer_idx], nn.MaxPool2d):
                     spk = self.features[layer_idx](spk)
                 if isinstance(self.features[layer_idx], nn.Dropout):
                     spk = spk * self.mask_features[layer_idx]

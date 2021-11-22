@@ -3,7 +3,7 @@ from torch import nn
 from torch.nn import functional as F
 
 
-def spike_norm(ann_model: nn.Module, snn_model: nn.Module, data_loader, device=None, timesteps=100, scale=0.7):
+def spike_norm(ann_model: nn.Module, snn_model: nn.Module, data_loader, device=None, timesteps=100, scale=1.0):
     missing_keys, unexpected_keys = snn_model.load_state_dict(ann_model.state_dict(), strict=False)
     print('\n Missing keys : {}\n Unexpected Keys: {}'.format(missing_keys, unexpected_keys))
 
@@ -31,7 +31,7 @@ def spike_norm(ann_model: nn.Module, snn_model: nn.Module, data_loader, device=N
                                     break
                                 spk, mem_features[idx_conv] = layer_conv(spk, mem_features[idx_conv])
 
-                            elif isinstance(layer_conv, nn.AvgPool2d):
+                            elif isinstance(layer_conv, nn.AvgPool2d) or isinstance(layer_conv, nn.MaxPool2d):
                                 spk = layer_conv(spk)
                             elif isinstance(layer_conv, nn.Dropout):
                                 spk = spk * mask_features[idx_conv]
@@ -55,9 +55,9 @@ def spike_norm(ann_model: nn.Module, snn_model: nn.Module, data_loader, device=N
                         for conv_idx in range(len(snn_model.features)):
                             if isinstance(snn_model.features[conv_idx], nn.Conv2d):
                                 spk, mem_features[conv_idx] = snn_model.features[conv_idx](spk, mem_features[conv_idx])
-                            if isinstance(snn_model.features[conv_idx], nn.AvgPool2d):
+                            if isinstance(snn_model.features[conv_idx], nn.AvgPool2d) or isinstance(snn_model.features[conv_idx], nn.MaxPool2d):
                                 spk = snn_model.features[conv_idx](spk)
-                            elif isinstance(snn_model.features[conv_idx], nn.Dropout):
+                            if isinstance(snn_model.features[conv_idx], nn.Dropout):
                                 spk = spk * mask_features[conv_idx]
 
                         spk = spk.view(batch_size, -1)
@@ -70,7 +70,7 @@ def spike_norm(ann_model: nn.Module, snn_model: nn.Module, data_loader, device=N
                                         max_threshold = cur_threshold
                                     break
                                 spk, mem_classifier[idx_linear] = layer_linear(spk, mem_classifier[idx_linear])
-                            elif isinstance(layer_linear, nn.Dropout):
+                            if isinstance(layer_linear, nn.Dropout):
                                 spk = spk * mask_classifier[idx_linear]
                 layer.threshold.data = max_threshold*scale
                 print(layer)

@@ -50,3 +50,19 @@ def test(model: nn.Module, description: str, test_loader):
     print(f'Test result on {description}: Avg loss is {test_loss}, Accuracy: {accuracy}%')
 
     return test_loss, accuracy
+
+
+def train(classifier, epoch, optimizer, train_loader):
+
+    classifier.train() # we need to set the mode for our model
+
+    for batch_idx, (images, targets) in enumerate(train_loader):
+        images, targets = images.to(DEVICE), targets.to(DEVICE)
+        optimizer.zero_grad()
+        output = classifier(images)
+        loss = F.cross_entropy(output, targets)
+        loss.backward()
+        optimizer.step()
+
+        if batch_idx % 300 == 0: # We visulize our output every 10 batches
+            print(f'Epoch {epoch}: [{batch_idx*len(images)}/{len(train_loader.dataset)}] Loss: {loss.item()}')
