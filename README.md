@@ -1,3 +1,4 @@
+# Analog to Spiking Neural Network Conversion
 # ECE57000: Artificial Intelligence (Fall 2021) - Course Project
 
 ## Abstract:
