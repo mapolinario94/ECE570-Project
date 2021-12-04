@@ -57,7 +57,7 @@ experiments:
 2. Download the file pre_trained_models from the following link: https://purdue0-my.sharepoint.com/:f:/g/personal/mapolina_purdue_edu/EiUkMDTMEZNIrcMFIFXjLpEBeWa_njsFo_2gvLJIvcssjw?e=0wWxRV 
    (Note: the original pre-trained models for ANN VGG5 and VGG16 where obtained from 
    https://github.com/nitin-rathi/hybrid-snn-conversion , but we modified their 
-   structure to be compatible with out implementation).
+   structure to be compatible with our implementation).
    
 3. Initiate a Jupyter server. Then, run the notebooks provided in ./notebooks file. (
    Note: VGG5 and VGG16 could take several hours to complete
