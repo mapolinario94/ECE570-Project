@@ -16,6 +16,7 @@ class LinearSpike(torch.autograd.Function):
         ctx.save_for_backward(input_)
         output = torch.zeros_like(input_).to(DEVICE)
         output[input_ > 0] = 1.0
+        # output = (input_ > 0).float()
         return output
 
     @staticmethod
